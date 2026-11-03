@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import { Link } from "react-router-dom";
+import { apiRequest, getApiErrorMessage } from "../utils/api";
 
 function Signup() {
   const [name, setName] = useState("");
@@ -31,26 +30,25 @@ function Signup() {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
+      const data = await apiRequest("/api/auth/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ name, email, password }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Signup failed.");
-      }
+      }, "We couldn't create your account. Please try again.");
 
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
 
       window.location.href = "/dashboard";
     } catch (err) {
-      setError(err.message || "Something went wrong.");
+      setError(
+        getApiErrorMessage(
+          err,
+          "We couldn't create your account. Please try again."
+        )
+      );
     }
   };
 
@@ -73,7 +71,7 @@ function Signup() {
         </h1>
 
         <p className="mt-3 text-sm leading-6 text-slate-400">
-          Join AI Resume Analyzer and start saving your progress.
+          Join AI Career Coach and start building your career journey.
         </p>
 
         <form onSubmit={handleSignup} className="mt-8 space-y-5">

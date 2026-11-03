@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import { apiRequest, getApiErrorMessage } from "../utils/api";
 
 function History() {
   const [analyses, setAnalyses] = useState([]);
@@ -19,23 +18,22 @@ function History() {
       try {
         const token = localStorage.getItem("token");
 
-        const response = await fetch(`${API_BASE_URL}/api/analyzer/history`, {
+        const data = await apiRequest("/api/analyzer/history", {
           method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.message || "Failed to fetch history.");
-        }
+        }, "We couldn't load your analysis history. Please try again.");
 
         setAnalyses(data);
       } catch (err) {
         console.error("History fetch error:", err);
-        setError(err.message || "Failed to load analysis history.");
+        setError(
+          getApiErrorMessage(
+            err,
+            "We couldn't load your analysis history. Please try again."
+          )
+        );
       } finally {
         setLoading(false);
       }
@@ -134,23 +132,17 @@ function History() {
       closeDeleteModal();
 
       const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE_URL}/api/analyzer/${analysisId}`, {
+      await apiRequest(`/api/analyzer/${analysisId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
         },
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to delete analysis.");
-      }
+      }, "We couldn't delete this analysis. Please try again.");
 
       setAnalyses((prev) => prev.filter((analysis) => analysis._id !== analysisId));
     } catch (err) {
       console.error("Delete error:", err);
-      alert(err.message || "Failed to delete analysis.");
+      alert(getApiErrorMessage(err, "We couldn't delete this analysis. Please try again."));
     } finally {
       setDeletingId("");
     }

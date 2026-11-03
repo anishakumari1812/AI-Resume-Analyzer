@@ -15,6 +15,11 @@ const analysisSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    targetRole: {
+      type: String,
+      default: "",
+      trim: true,
+    },
     analysisResult: {
       type: Object,
       required: true,
@@ -30,6 +35,14 @@ const analysisSchema = new mongoose.Schema(
     originalFileName: {
       type: String,
       default: "",
+    },
+    interviewQuestions: {
+      type: Object,
+      default: null,
+    },
+    skillGapAnalyses: {
+      type: Object,
+      default: null,
     },
   },
   {

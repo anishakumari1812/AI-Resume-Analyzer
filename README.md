@@ -2,10 +2,6 @@
 
 AI-powered web application that analyzes resumes and provides ATS-style feedback, keyword matching, and improvement suggestions.
 
-🌐 **Live Demo:** https://ai-resume-analyzer-ivory-psi.vercel.app  
-🎥 **Demo Video:** https://www.youtube.com/watch?v=vwf1yrI28TI  
-
----
 
 ## ✨ Features
 
@@ -63,7 +59,7 @@ AI-powered web application that analyzes resumes and provides ATS-style feedback
 
 ```bash
 # Clone repo
-git clone https://github.com/mahir-alam/AI-Resume-Analyzer.git
+git clone https://github.com/Apoorva07-A/AI-Resume-analyzer.git
 cd AI-Resume-Analyzer
 ```
 
@@ -92,7 +88,7 @@ Create a `.env` file in **server**:
 ```env
 MONGODB_URI=your_mongodb_connection
 JWT_SECRET=your_secret_key
-OPENAI_API_KEY=your_openai_api_key
+GROQ_API_KEY=your_groq_api_key
 CLIENT_URL=http://localhost:5173
 ```
 
@@ -121,14 +117,14 @@ React Frontend → Express API → MongoDB + OpenAI API
 
 * First request may be slow (Render free tier)
 * Demo mode does not save data
-* Requires OpenAI API key for analysis
+* Requires Groq API key for analysis
 
 ---
 
 ## 👨‍💻 Author
 
-Mahir Alam
-(University of Calgary)
+Apoorva Yadav
+(National Institute of Technology, Tiruchirappalli)
 
 ---
 

@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import { Link } from "react-router-dom";
+import { apiRequest, getApiErrorMessage } from "../utils/api";
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -25,26 +24,20 @@ function Login() {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+      const data = await apiRequest("/api/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ email, password }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Login failed.");
-      }
+      }, "We couldn't sign you in. Please try again.");
 
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
 
       window.location.href = "/dashboard";
     } catch (err) {
-      setError(err.message || "Something went wrong.");
+      setError(getApiErrorMessage(err, "We couldn't sign you in. Please try again."));
     }
   };
 
@@ -67,7 +60,7 @@ function Login() {
         </h1>
 
         <p className="mt-3 text-sm leading-6 text-slate-400">
-          Sign in to access your AI Resume Analyzer dashboard.
+          Sign in to continue your AI Career Coach journey.
         </p>
 
         <form onSubmit={handleLogin} className="mt-8 space-y-5">

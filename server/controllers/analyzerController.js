@@ -2,10 +2,24 @@ import OpenAI from "openai";
 import { PDFParse } from "pdf-parse";
 import Analysis from "../models/Analysis.js";
 
+const isGroqApiKeyConfigured = () => {
+  const apiKey = process.env.GROQ_API_KEY?.trim();
+
+  return Boolean(apiKey && apiKey !== "your_groq_api_key_here");
+};
+
+const isGroqConnectionError = (error) =>
+  error?.name === "APIConnectionError" ||
+  error?.cause?.code === "EACCES" ||
+  error?.cause?.code === "ENETUNREACH" ||
+  error?.cause?.code === "ETIMEDOUT" ||
+  error?.cause?.code === "ECONNREFUSED";
+
 const analyzeResume = async (req, res) => {
   try {
-    const { resumeText, jobDescription, resumeLabel, jobLabel } = req.body;
+    const { resumeText, jobDescription, targetRole, resumeLabel, jobLabel } = req.body;
     let finalResumeText = resumeText?.trim() || "";
+    const trimmedTargetRole = targetRole?.trim() || "";
     const trimmedResumeLabel = resumeLabel?.trim() || "";
     const trimmedJobLabel = jobLabel?.trim() || "";
     const originalFileName = req.file?.originalname || "";
@@ -18,12 +32,20 @@ const analyzeResume = async (req, res) => {
 
     const generatedJobLabel =
       trimmedJobLabel ||
+      trimmedTargetRole ||
       jobDescription
         ?.split("\n")
         .map((line) => line.trim())
         .find(Boolean) ||
       "No Job Label";
     const hasJobDescription = jobDescription && jobDescription.trim() !== "";
+
+    if (!trimmedTargetRole && !hasJobDescription) {
+      return res.status(400).json({
+        message:
+          "Role Information Required: Please provide either a target role or a job description before analyzing your resume.",
+      });
+    }
 
     if (req.file) {
       try {
@@ -48,20 +70,24 @@ const analyzeResume = async (req, res) => {
       });
     }
 
-    if (!process.env.OPENAI_API_KEY) {
+    if (!isGroqApiKeyConfigured()) {
       return res.status(500).json({
-        message: "OpenAI API key is missing in server environment variables.",
+        message:
+          "AI analysis is not configured yet. Please add a valid Groq API key on the server.",
       });
     }
 
     const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
+      apiKey: process.env.GROQ_API_KEY,
+      baseURL: "https://api.groq.com/openai/v1",
+      timeout: 30000,
+      maxRetries: 1,
     });
 
 const prompt = `
 You are a senior ATS (Applicant Tracking System) optimization expert and professional resume reviewer.
 
-Your job is to analyze a resume and compare it against a job description (if provided), producing structured, high-quality, realistic ATS feedback.
+Your job is to analyze a resume against the provided target role or job description, producing structured, high-quality, realistic ATS feedback.
 
 Return ONLY valid JSON in this EXACT format:
 
@@ -123,15 +149,23 @@ CRITICAL RULES:
 - DO NOT mix ATS suggestions into general suggestions
 - DO NOT return explanations outside JSON
 
+8. TARGET ROLE CONTEXT:
+- When a target role is provided without a job description, use that role to estimate ATS alignment, relevant matched keywords, missing keywords, and ATS suggestions.
+- The target role is valid analysis context and must not be treated as missing context.
+
 Resume:
 ${finalResumeText}
 
 Job Description:
 ${hasJobDescription ? jobDescription.trim() : "Not provided"}
+
+Target Role:
+${trimmedTargetRole || "Not provided"}
 `;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-5.4-mini",
+      model: "openai/gpt-oss-120b",
+      response_format: { type: "json_object" },
       messages: [
         {
           role: "system",
@@ -197,6 +231,7 @@ ${hasJobDescription ? jobDescription.trim() : "Not provided"}
       analysis: parsed,
       resumeText: finalResumeText,
       jobDescription: jobDescription?.trim() || "",
+      targetRole: trimmedTargetRole,
       resumeLabel: generatedResumeLabel,
       jobLabel: generatedJobLabel,
       originalFileName,
@@ -205,8 +240,30 @@ ${hasJobDescription ? jobDescription.trim() : "Not provided"}
   } catch (error) {
     console.error("AI Error:", error);
 
+    if (isGroqConnectionError(error)) {
+      return res.status(503).json({
+        message:
+          "The server cannot reach the AI service. Check that outbound HTTPS access to api.groq.com is allowed, then try again.",
+      });
+    }
+
+    if (error?.status === 401 || error?.status === 403) {
+      return res.status(500).json({
+        message:
+          "The AI service key is invalid or unauthorized. Please update the server API key.",
+      });
+    }
+
+    if (error?.status === 429) {
+      return res.status(500).json({
+        message:
+          "The AI service is busy or the usage limit was reached. Please try again later.",
+      });
+    }
+
     return res.status(500).json({
-      message: "Error analyzing resume with AI.",
+      message:
+        "We couldn't analyze the resume right now. Please try again in a moment.",
     });
   }
 };
@@ -260,6 +317,7 @@ const saveAnalysis = async (req, res) => {
     const {
       resumeText,
       jobDescription,
+      targetRole,
       analysisResult,
       resumeLabel,
       jobLabel,
@@ -276,6 +334,7 @@ const saveAnalysis = async (req, res) => {
       user: req.user.userId,
       resumeText,
       jobDescription: jobDescription || "",
+      targetRole: targetRole || "",
       analysisResult,
       resumeLabel: resumeLabel || "Untitled Resume",
       jobLabel: jobLabel || "No Job Label",
