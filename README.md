@@ -123,8 +123,8 @@ React Frontend → Express API → MongoDB + OpenAI API
 
 ## 👨‍💻 Author
 
-Apoorva Yadav
-(National Institute of Technology, Tiruchirappalli)
+Anisha Kumari
+(Indira Gandhi Delhi Technical University for Women, New Delhi)
 
 ---
 
